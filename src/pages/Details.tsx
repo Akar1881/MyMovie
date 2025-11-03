@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Star, Calendar, Clock } from 'lucide-react';
+import { ArrowLeft, Star, Calendar, Clock, Play } from 'lucide-react';
 import { MediaDetails, Cast, getDetails, getCredits, getImageUrl } from '../services/tmdb';
 
 export default function Details() {
@@ -128,6 +128,14 @@ export default function Details() {
                 </span>
               ))}
             </div>
+
+            <button
+              onClick={() => navigate(`/watch/${type}/${id}`)}
+              className="flex items-center gap-3 px-8 py-4 bg-white hover:bg-gray-200 text-black rounded-lg font-bold text-lg transition-all hover:scale-105 mb-6"
+            >
+              <Play className="w-6 h-6 fill-current" />
+              Watch Now
+            </button>
 
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-white mb-3">Overview</h2>

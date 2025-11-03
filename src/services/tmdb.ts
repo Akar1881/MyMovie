@@ -32,12 +32,32 @@ export interface Cast {
   profile_path: string | null;
 }
 
+export interface Season {
+  id: number;
+  name: string;
+  season_number: number;
+  episode_count: number;
+  poster_path: string | null;
+  air_date: string;
+}
+
+export interface Episode {
+  id: number;
+  name: string;
+  episode_number: number;
+  season_number: number;
+  still_path: string | null;
+  vote_average: number;
+  overview: string;
+  air_date: string;
+}
+
 export const getImageUrl = (path: string | null, size: string = 'w500') => {
   if (!path) return 'https://via.placeholder.com/500x750?text=No+Image';
   return `${TMDB_IMAGE_BASE}/${size}${path}`;
 };
 
-export const getOptimizedImageUrl = (path: string | null, size: string = 'w500', format: 'webp' | 'jpg' = 'webp') => {
+export const getOptimizedImageUrl = (path: string | null, size: string = 'w500') => {
   if (!path) return 'https://via.placeholder.com/500x750?text=No+Image';
   return `${TMDB_IMAGE_BASE}/${size}${path}`;
 };
@@ -100,4 +120,14 @@ export const getCredits = async (mediaType: 'movie' | 'tv', id: number) => {
 export const getGenres = async (mediaType: 'movie' | 'tv') => {
   const data = await fetchFromTMDB(`/genre/${mediaType}/list`);
   return data.genres;
+};
+
+export const getTVSeasons = async (tvId: number): Promise<Season[]> => {
+  const data = await fetchFromTMDB(`/tv/${tvId}`);
+  return data.seasons || [];
+};
+
+export const getSeasonEpisodes = async (tvId: number, seasonNumber: number): Promise<Episode[]> => {
+  const data = await fetchFromTMDB(`/tv/${tvId}/season/${seasonNumber}`);
+  return data.episodes || [];
 };
