@@ -11,11 +11,25 @@ interface MediaSection {
 
 export default function Home() {
   const [sections, setSections] = useState<MediaSection[]>([]);
-  const [hero, setHero] = useState<Media | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [heroList, setHeroList] = useState<Media[]>([]);
+  const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
+  const [heroLoading, setHeroLoading] = useState(true);
+  const [sectionsLoading, setSectionsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchHero = async () => {
+      try {
+        const trending = await getTrending('all', 'week');
+        setHeroList(trending.slice(0, 10));
+        setCurrentHeroIndex(0);
+      } catch (error) {
+        console.error('Error fetching hero:', error);
+      } finally {
+        setHeroLoading(false);
+      }
+    };
+
+    const fetchSections = async () => {
       try {
         const [trending, newTV, newMovies, classicMovies, classicTV] = await Promise.all([
           getTrending('all', 'week'),
@@ -25,7 +39,6 @@ export default function Home() {
           getClassic('tv'),
         ]);
 
-        setHero(trending[0]);
         setSections([
           { title: 'Trending Now', media: trending.slice(1, 20) },
           { title: 'New TV Shows', media: newTV.results, mediaType: 'tv' },
@@ -34,14 +47,25 @@ export default function Home() {
           { title: 'Classic TV Shows', media: classicTV, mediaType: 'tv' },
         ]);
       } catch (error) {
-        console.error('Error fetching home data:', error);
+        console.error('Error fetching sections:', error);
       } finally {
-        setLoading(false);
+        setSectionsLoading(false);
       }
     };
 
-    fetchData();
+    fetchHero();
+    fetchSections();
   }, []);
+
+  useEffect(() => {
+    if (heroList.length === 0) return;
+
+    const interval = setInterval(() => {
+      setCurrentHeroIndex((prev) => (prev + 1) % heroList.length);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [heroList.length]);
 
   const scrollSection = (ref: React.RefObject<HTMLDivElement>, direction: 'left' | 'right') => {
     if (ref.current) {
@@ -50,47 +74,75 @@ export default function Home() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white text-xl">Loading...</div>
-      </div>
-    );
-  }
+  const hero = heroList[currentHeroIndex];
 
   return (
     <div className="min-h-screen bg-black pb-24 pt-20">
-      {hero && (
-        <div className="relative h-[70vh] w-full mb-8">
-          <div className="absolute inset-0">
+      {heroLoading ? (
+        <div className="relative h-[70vh] w-full mb-8 bg-gray-900 animate-pulse" />
+      ) : hero ? (
+        <div className="relative h-[70vh] w-full mb-8 overflow-hidden">
+          <div className="absolute inset-0 transition-opacity duration-1000">
             <img
               src={getImageUrl(hero.backdrop_path, 'original')}
               alt={hero.title || hero.name}
               className="w-full h-full object-cover"
+              loading="eager"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
           </div>
           <div className="relative h-full flex items-end">
             <div className="max-w-7xl mx-auto px-4 pb-12 w-full">
-              <h2 className="text-4xl md:text-6xl font-bold text-white mb-4">
+              <h2 className="text-4xl md:text-6xl font-bold text-white mb-4 transition-all duration-500">
                 {hero.title || hero.name}
               </h2>
-              <p className="text-lg text-gray-200 max-w-3xl line-clamp-3">{hero.overview}</p>
+              <p className="text-lg text-gray-200 max-w-3xl line-clamp-3 transition-all duration-500">{hero.overview}</p>
+              <div className="flex gap-2 mt-6">
+                {heroList.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentHeroIndex(index)}
+                    className={`h-1 transition-all ${
+                      index === currentHeroIndex
+                        ? 'w-12 bg-white'
+                        : 'w-2 bg-gray-600 hover:bg-gray-400'
+                    }`}
+                    aria-label={`Go to hero ${index + 1}`}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
 
       <div className="space-y-8">
-        {sections.map((section, index) => (
-          <MediaSection
-            key={index}
-            title={section.title}
-            media={section.media}
-            mediaType={section.mediaType}
-            onScroll={scrollSection}
-          />
-        ))}
+        {sectionsLoading ? (
+          <div className="max-w-7xl mx-auto px-4 space-y-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i}>
+                <div className="h-8 w-48 bg-gray-800 rounded mb-4 animate-pulse" />
+                <div className="flex gap-4 overflow-hidden">
+                  {[1, 2, 3, 4, 5].map((j) => (
+                    <div key={j} className="flex-shrink-0 w-40 md:w-48">
+                      <div className="w-full h-60 md:h-72 bg-gray-800 rounded-lg animate-pulse" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          sections.map((section, index) => (
+            <MediaSection
+              key={index}
+              title={section.title}
+              media={section.media}
+              mediaType={section.mediaType}
+              onScroll={scrollSection}
+            />
+          ))
+        )}
       </div>
     </div>
   );

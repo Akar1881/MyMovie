@@ -37,6 +37,11 @@ export const getImageUrl = (path: string | null, size: string = 'w500') => {
   return `${TMDB_IMAGE_BASE}/${size}${path}`;
 };
 
+export const getOptimizedImageUrl = (path: string | null, size: string = 'w500', format: 'webp' | 'jpg' = 'webp') => {
+  if (!path) return 'https://via.placeholder.com/500x750?text=No+Image';
+  return `${TMDB_IMAGE_BASE}/${size}${path}`;
+};
+
 const fetchFromTMDB = async (endpoint: string) => {
   const url = `${TMDB_BASE_URL}${endpoint}${endpoint.includes('?') ? '&' : '?'}api_key=${TMDB_API_KEY}`;
   const response = await fetch(url);

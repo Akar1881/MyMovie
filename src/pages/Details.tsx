@@ -137,18 +137,23 @@ export default function Details() {
             {cast.length > 0 && (
               <div>
                 <h2 className="text-2xl font-bold text-white mb-4">Cast</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {cast.map((actor) => (
-                    <div key={actor.id} className="text-center">
-                      <img
-                        src={getImageUrl(actor.profile_path, 'w185')}
-                        alt={actor.name}
-                        className="w-full aspect-square object-cover rounded-lg mb-2"
-                      />
-                      <h3 className="text-white font-medium text-sm">{actor.name}</h3>
-                      <p className="text-gray-400 text-xs">{actor.character}</p>
-                    </div>
-                  ))}
+                <div className="overflow-x-auto scrollbar-hide">
+                  <div className="flex gap-4" style={{ scrollbarWidth: 'none' }}>
+                    {cast.map((actor) => (
+                      <div key={actor.id} className="flex-shrink-0 w-32 md:w-40 text-center">
+                        <div className="relative overflow-hidden rounded-lg shadow-lg mb-3">
+                          <img
+                            src={getImageUrl(actor.profile_path, 'w185')}
+                            alt={actor.name}
+                            className="w-full aspect-square object-cover hover:scale-110 transition-transform"
+                            loading="lazy"
+                          />
+                        </div>
+                        <h3 className="text-white font-medium text-sm line-clamp-2">{actor.name}</h3>
+                        <p className="text-gray-400 text-xs line-clamp-2">{actor.character}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}

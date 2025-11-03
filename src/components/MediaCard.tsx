@@ -22,12 +22,13 @@ export default function MediaCard({ media, mediaType }: MediaCardProps) {
       onClick={handleClick}
       className="flex-shrink-0 w-40 md:w-48 cursor-pointer group transition-transform hover:scale-105"
     >
-      <div className="relative overflow-hidden rounded-lg shadow-lg">
+      <div className="relative overflow-hidden rounded-lg shadow-lg bg-gray-900">
         <img
           src={getImageUrl(media.poster_path, 'w342')}
           alt={title}
-          className="w-full h-60 md:h-72 object-cover"
+          className="w-full h-60 md:h-72 object-cover transition-transform duration-300 group-hover:scale-110"
           loading="lazy"
+          decoding="async"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
         <div className="absolute bottom-0 left-0 right-0 p-3 translate-y-full group-hover:translate-y-0 transition-transform">

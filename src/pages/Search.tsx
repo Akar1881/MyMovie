@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search as SearchIcon } from 'lucide-react';
 import MediaGrid from '../components/MediaGrid';
 import { Media, search } from '../services/tmdb';
 
@@ -44,9 +44,11 @@ export default function Search() {
 
   if (!query) {
     return (
-      <div className="min-h-screen bg-black pb-24 pt-24 px-4">
-        <div className="max-w-7xl mx-auto">
-          <p className="text-white text-center">Enter a search query to find movies and TV shows.</p>
+      <div className="min-h-screen bg-black pb-24 pt-24 px-4 flex items-center justify-center">
+        <div className="max-w-2xl mx-auto text-center">
+          <SearchIcon className="w-24 h-24 text-gray-700 mx-auto mb-6" />
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">Start Searching</h1>
+          <p className="text-gray-400 text-lg">Enter a movie or TV show name in the search bar to get started</p>
         </div>
       </div>
     );
@@ -55,24 +57,37 @@ export default function Search() {
   return (
     <div className="min-h-screen bg-black pb-24 pt-24 px-4">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">Search Results</h1>
-        <p className="text-gray-400 mb-6">Showing results for "{query}"</p>
+        <div className="mb-8">
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">Search Results</h1>
+          <p className="text-gray-400 text-lg">
+            Showing results for <span className="text-red-500 font-semibold">"{query}"</span>
+          </p>
+        </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="text-white text-xl">Loading...</div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {[...Array(15)].map((_, i) => (
+              <div key={i} className="animate-pulse">
+                <div className="w-full h-60 md:h-72 bg-gray-800 rounded-lg mb-2" />
+                <div className="h-4 bg-gray-800 rounded w-3/4" />
+              </div>
+            ))}
           </div>
         ) : media.length === 0 ? (
           <div className="text-center py-20">
-            <p className="text-white text-xl">No results found for "{query}"</p>
-            <p className="text-gray-400 mt-2">Try searching with different keywords</p>
+            <div className="text-6xl mb-4">🎬</div>
+            <p className="text-white text-2xl font-bold mb-2">No results found</p>
+            <p className="text-gray-400 text-lg">Try searching with different keywords</p>
           </div>
         ) : (
           <>
+            <div className="mb-4 text-gray-400 text-sm">
+              {media.length} result{media.length !== 1 ? 's' : ''} found
+            </div>
             <MediaGrid media={media} />
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-4 mt-8">
+              <div className="flex items-center justify-center gap-3 mt-12">
                 <button
                   onClick={() => goToPage(currentPage - 1)}
                   disabled={currentPage === 1}
@@ -81,9 +96,11 @@ export default function Search() {
                   <ChevronLeft className="w-5 h-5" />
                   Previous
                 </button>
+
                 <span className="text-white">
-                  Page {currentPage} of {totalPages}
-                </span>
+                Page {currentPage} of {totalPages}
+              </span>
+
                 <button
                   onClick={() => goToPage(currentPage + 1)}
                   disabled={currentPage === totalPages}
