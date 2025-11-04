@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Star, Play } from 'lucide-react';
+import { ArrowLeft, Star, Play, Subtitles } from 'lucide-react';
 import { getTVSeasons, getSeasonEpisodes, Season, Episode, getImageUrl } from '../services/tmdb';
+
+interface SubtitleState {
+  url: string | null;
+  status: 'idle' | 'fetching' | 'translating' | 'ready' | 'error';
+  message: string;
+  fromCache: boolean;
+}
 
 export default function Watch() {
   const { type, id } = useParams<{ type: 'movie' | 'tv'; id: string }>();
@@ -12,13 +19,18 @@ export default function Watch() {
   const [selectedEpisode, setSelectedEpisode] = useState<number>(1);
   const [loading, setLoading] = useState(true);
   const [showPlayer, setShowPlayer] = useState(false);
+  const [subtitle, setSubtitle] = useState<SubtitleState>({
+    url: null,
+    status: 'idle',
+    message: '',
+    fromCache: false,
+  });
 
   useEffect(() => {
     if (type === 'tv' && id) {
       fetchSeasons();
     } else if (type === 'movie') {
       setLoading(false);
-      setShowPlayer(true);
     }
   }, [type, id]);
 
@@ -58,22 +70,102 @@ export default function Watch() {
     }
   };
 
+  const fetchSubtitle = async () => {
+    if (!id) return;
+
+    setSubtitle({ url: null, status: 'fetching', message: 'Fetching subtitle...', fromCache: false });
+
+    try {
+      const apiUrl = import.meta.env.VITE_SUBTITLE_API_URL;
+      const body = type === 'movie'
+        ? { tmdbId: parseInt(id), type: 'movie' }
+        : { tmdbId: parseInt(id), type: 'tv', season: selectedSeason, episode: selectedEpisode };
+
+      const response = await fetch(`${apiUrl}/api/subtitle/fetch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.subtitleUrl) {
+        setSubtitle({
+          url: data.subtitleUrl, // This is the full URL returned by the API
+          status: 'ready',
+          message: data.fromCache ? 'Subtitle loaded from cache' : 'Subtitle ready',
+          fromCache: data.fromCache,
+        });
+      } else {
+        setSubtitle({
+          url: null,
+          status: 'error',
+          message: data.message || 'Subtitle not available',
+          fromCache: false,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching subtitle:', error);
+      setSubtitle({
+        url: null,
+        status: 'error',
+        message: 'Failed to fetch subtitle',
+        fromCache: false,
+      });
+    }
+  };
+
+  const buildPlayerUrl = (subtitleUrl: string | null = null) => {
+    const baseUrl = type === 'movie'
+      ? `https://vidlink.pro/movie/${id}`
+      : `https://vidlink.pro/tv/${id}/${selectedSeason}/${selectedEpisode}`;
+
+    const params = new URLSearchParams({
+      primaryColor: '63b8bc',
+      secondaryColor: 'a2a2a2',
+      iconColor: 'eefdec',
+      icons: 'default',
+      player: 'default',
+      title: 'true',
+      poster: 'true',
+      autoplay: 'true',
+      nextbutton: 'false'
+    });
+
+    if (subtitleUrl) {
+      // Use the full URL returned by the API directly
+      params.append('sub_file', subtitleUrl);
+      params.append('sub_label', 'Kurdish');
+    }
+
+    return `${baseUrl}?${params.toString()}`;
+  };
+
   const handleSeasonChange = (seasonNumber: number) => {
     setSelectedSeason(seasonNumber);
     setShowPlayer(false);
+    setSubtitle({ url: null, status: 'idle', message: '', fromCache: false });
   };
 
   const handleEpisodeSelect = (episodeNumber: number) => {
     setSelectedEpisode(episodeNumber);
+    setShowPlayer(false);
+    setSubtitle({ url: null, status: 'idle', message: '', fromCache: false });
+  };
+
+  const handlePlayWithSubtitle = async () => {
+    // For both movies and TV shows, fetch subtitle first, then show player
+    await fetchSubtitle();
+    setShowPlayer(true);
+  };
+
+  const handlePlayWithoutSubtitle = () => {
+    setSubtitle({ url: null, status: 'idle', message: '', fromCache: false });
     setShowPlayer(true);
   };
 
   const getIframeSrc = () => {
-    if (type === 'movie') {
-      return `https://vidlink.pro/movie/${id}`;
-    } else {
-      return `https://vidlink.pro/tv/${id}/${selectedSeason}/${selectedEpisode}`;
-    }
+    return buildPlayerUrl(subtitle.status === 'ready' ? subtitle.url : null);
   };
 
   if (loading) {
@@ -164,21 +256,76 @@ export default function Watch() {
             </div>
 
             {!showPlayer && (
-              <button
-                onClick={() => setShowPlayer(true)}
-                className="flex items-center gap-2 px-6 py-3 bg-white hover:bg-gray-200 text-black rounded-lg font-semibold transition-colors mb-6"
-              >
-                <Play className="w-5 h-5" />
-                Play Episode {selectedEpisode}
-              </button>
+              <div className="flex gap-4 mb-6">
+                <button
+                  onClick={handlePlayWithSubtitle}
+                  className="flex items-center gap-2 px-6 py-3 bg-white hover:bg-gray-200 text-black rounded-lg font-semibold transition-colors"
+                >
+                  <Play className="w-5 h-5" />
+                  Play Episode {selectedEpisode} with Subtitle
+                </button>
+                <button
+                  onClick={handlePlayWithoutSubtitle}
+                  className="flex items-center gap-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-semibold transition-colors"
+                >
+                  <Play className="w-5 h-5" />
+                  Play Without Subtitle
+                </button>
+              </div>
             )}
           </>
+        )}
+
+        {type === 'movie' && !showPlayer && (
+          <div className="flex gap-4 mb-6">
+            <button
+              onClick={handlePlayWithSubtitle}
+              className="flex items-center gap-2 px-6 py-3 bg-white hover:bg-gray-200 text-black rounded-lg font-semibold transition-colors"
+            >
+              <Play className="w-5 h-5" />
+              Play Movie with Subtitle
+            </button>
+            <button
+              onClick={handlePlayWithoutSubtitle}
+              className="flex items-center gap-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-semibold transition-colors"
+            >
+              <Play className="w-5 h-5" />
+              Play Without Subtitle
+            </button>
+          </div>
+        )}
+
+        {subtitle.status !== 'idle' && (
+          <div className="mb-6">
+            <div className="flex items-center gap-3 bg-gray-800 rounded-lg p-4">
+              <Subtitles className={`w-5 h-5 ${
+                subtitle.status === 'ready' ? 'text-green-400' :
+                subtitle.status === 'error' ? 'text-red-400' :
+                'text-yellow-400'
+              }`} />
+              <div className="flex-1">
+                <p className={`text-sm font-medium ${
+                  subtitle.status === 'ready' ? 'text-green-400' :
+                  subtitle.status === 'error' ? 'text-red-400' :
+                  'text-yellow-400'
+                }`}>
+                  {subtitle.message}
+                </p>
+                {(subtitle.status === 'fetching' || subtitle.status === 'translating') && (
+                  <div className="mt-2 w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+                    <div className="h-full bg-yellow-400 rounded-full animate-pulse" style={{ width: '60%' }} />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         )}
 
         {showPlayer && (
           <div className="w-full">
             <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
               <iframe
+                key={getIframeSrc()}
                 src={getIframeSrc()}
                 className="absolute top-0 left-0 w-full h-full rounded-lg"
                 allowFullScreen
